@@ -1,0 +1,87 @@
+---
+title: "ARSdata"
+author: "Yudan Ding"
+date: "9/10/2019"
+output: html_document
+---
+
+```{r}
+#installng all packages
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(readxl)
+library(reshape2)
+library(data.table)
+```
+
+```{r}
+#read excel file, drop column 'Location' which is '6AM HQ' for all rows'
+#this spreadsheet contains data from March to July, I used a different one for august, same code though
+ars <-read_excel('arssales.xlsx')
+ars[,'Location'] <- NULL
+head(ars)
+```
+
+```{r}
+#splitting rows with multiple items purchased into columns; note here that 16 is the maximum number of items that have been puchased in one transaction. 
+
+ars_temp2 <- separate(ars, 'Products', paste('product', 1:16, sep = '_'),sep=',', extra = 'drop')
+ars_temp3 <- separate(ars_temp2, 'Prices', paste('price', 1:16, sep = '_'),sep=',', extra = 'drop')
+ars_temp4 <- ars_temp3 %>% select_if(~!all(is.na(.))>0)
+head(ars_temp4)
+ars_temp4[,c('Slots Vended','SKUs')] <- NULL
+
+```
+
+```{r}
+#'gather' data so that one transaction with multiple item purchased will be splited to separate rows
+
+
+long_df <- ars_temp4 %>% gather(product_id, product_name, product_1:product_16)
+long_df1 <- long_df %>% select(-price_1:-price_16) %>% filter(product_name!='NA')
+
+#converting prices 
+long_df2 <- ars_temp4 %>% gather(price_id, unit_price_bd, price_1:price_16)
+long_df2 <- long_df2 %>% select(-product_1:-product_16) %>% filter(unit_price_bd!='NA')
+
+long_df1$price_id <- long_df2$price_id
+long_df1$unit_price_bd <- as.numeric(long_df2$unit_price_bd)
+df <- long_df1
+df$product_name <-trimws(df$product_name)
+
+```
+
+```{r}
+#create a quantity column to match Bytes fridges dataset 
+df1 <- df %>% 
+  group_by(ID, Date, Time, Kiosk, `Kiosk ID`,Total, Subtotal, `Discount Applied`, `Tender Type`,`Cash Received`, `Cash Dispensed`,`Card Transaction ID`,`Credits Received`, Promotions, product_name,unit_price_bd)%>%summarise(QTY = n_distinct(product_id))
+
+df2<-df1 %>% mutate(row_subtotal = as.numeric(unit_price_bd)*QTY,
+                    unit_price_ad = (row_subtotal/Subtotal)*Total/QTY,
+                    row_total=QTY*unit_price_ad,
+                    row_discount_applied=row_subtotal-row_total)
+
+
+df2$`Kiosk ID` <- NULL
+df2$`Cash Received`<-NULL
+df2$`Cash Dispensed` <- NULL
+df2$`Card Transaction ID`<-NULL
+df2$`Tender Type`<-NULL
+df2$`Credits Received`<-NULL
+df2$Total <- NULL
+df2$Subtotal<-NULL
+df2$`Discount Applied`<-NULL
+
+#rename columns 
+setnames(df2,old=c('row_total','row_discount_applied','row_subtotal'),new=c('total','discount_applied','subtotal'))
+```
+
+
+```{r}
+write.csv(df2, '~/Downloads/6AMHealth/cleaned_arsdata.csv')
+```
+
+
+
+
