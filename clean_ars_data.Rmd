@@ -1,6 +1,6 @@
 ---
 title: "ARSdata"
-author: "Yudan Ding"
+author: "Rachel Ding"
 date: "9/10/2019"
 output: html_document
 ---
@@ -16,16 +16,19 @@ library(data.table)
 ```
 
 ```{r}
+#to get data, go to the ars portal and download transactions data and select report type 'Transaction Overview'
 #read excel file, drop column 'Location' which is '6AM HQ' for all rows'
 #this spreadsheet contains data from March to July, I used a different one for august, same code though
-ars <-read_excel('arssales.xlsx')
+
+ars <-read_excel('September.xlsx')
 ars[,'Location'] <- NULL
 head(ars)
 ```
 
+
+
 ```{r}
 #splitting rows with multiple items purchased into columns; note here that 16 is the maximum number of items that have been puchased in one transaction. 
-
 ars_temp2 <- separate(ars, 'Products', paste('product', 1:16, sep = '_'),sep=',', extra = 'drop')
 ars_temp3 <- separate(ars_temp2, 'Prices', paste('price', 1:16, sep = '_'),sep=',', extra = 'drop')
 ars_temp4 <- ars_temp3 %>% select_if(~!all(is.na(.))>0)
@@ -38,12 +41,12 @@ ars_temp4[,c('Slots Vended','SKUs')] <- NULL
 #'gather' data so that one transaction with multiple item purchased will be splited to separate rows
 
 
-long_df <- ars_temp4 %>% gather(product_id, product_name, product_1:product_16)
-long_df1 <- long_df %>% select(-price_1:-price_16) %>% filter(product_name!='NA')
+long_df <- ars_temp4 %>% gather(product_id, product_name, product_1:product_4)
+long_df1 <- long_df %>% select(-price_1:-price_4) %>% filter(product_name!='NA')
 
 #converting prices 
-long_df2 <- ars_temp4 %>% gather(price_id, unit_price_bd, price_1:price_16)
-long_df2 <- long_df2 %>% select(-product_1:-product_16) %>% filter(unit_price_bd!='NA')
+long_df2 <- ars_temp4 %>% gather(price_id, unit_price_bd, price_1:price_4)
+long_df2 <- long_df2 %>% select(-product_1:-product_4) %>% filter(unit_price_bd!='NA')
 
 long_df1$price_id <- long_df2$price_id
 long_df1$unit_price_bd <- as.numeric(long_df2$unit_price_bd)
@@ -75,11 +78,14 @@ df2$`Discount Applied`<-NULL
 
 #rename columns 
 setnames(df2,old=c('row_total','row_discount_applied','row_subtotal'),new=c('total','discount_applied','subtotal'))
+
+#reorder columns 
+cleaned_data <- df2[c('ID', 'Date', 'Time', 'Kiosk','product_name','QTY', 'subtotal','unit_price_bd','unit_price_ad','discount_applied','total','Promotions')]
 ```
 
 
 ```{r}
-write.csv(df2, '~/Downloads/6AMHealth/cleaned_arsdata.csv')
+write.csv(cleaned_data, '~/Downloads/6AMHealth/cleaned_separsdata.csv')
 ```
 
 
