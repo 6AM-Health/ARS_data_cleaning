@@ -28,7 +28,8 @@ head(ars)
 
 
 ```{r}
-#splitting rows with multiple items purchased into columns; note here that 16 is the maximum number of items that have been puchased in one transaction. 
+#splitting rows with multiple items purchased into columns; note here that 16 is the maximum number of items that have been puchased in one transaction in the March-July dataset. You may need to update that if someone purchases more than 16 items in one trasaction in your dataset 
+
 ars_temp2 <- separate(ars, 'Products', paste('product', 1:16, sep = '_'),sep=',', extra = 'drop')
 ars_temp3 <- separate(ars_temp2, 'Prices', paste('price', 1:16, sep = '_'),sep=',', extra = 'drop')
 ars_temp4 <- ars_temp3 %>% select_if(~!all(is.na(.))>0)
@@ -39,6 +40,10 @@ ars_temp4[,c('Slots Vended','SKUs')] <- NULL
 
 ```{r}
 #'gather' data so that one transaction with multiple item purchased will be splited to separate rows
+# Note: you may need to change the product_# and price_# here. check head(ars_temp4) to see how many columns get dropped. 
+# use product_16 and price_16 for march-July dataset 
+# use 4 for september 
+# use 11 for august 
 
 
 long_df <- ars_temp4 %>% gather(product_id, product_name, product_1:product_4)
